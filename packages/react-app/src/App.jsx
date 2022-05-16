@@ -60,7 +60,7 @@ const { ethers } = require("ethers");
 */
 
 /// 📡 What chain are your contracts deployed to?
-const targetNetwork = NETWORKS.localhost; // <------- select your target frontend network (localhost, rinkeby, xdai, mainnet)
+const targetNetwork = NETWORKS.rinkeby; // <------- select your target frontend network (localhost, rinkeby, xdai, mainnet)
 
 // 😬 Sorry for all the console logging
 const DEBUG = true;
@@ -78,8 +78,8 @@ const scaffoldEthProvider = navigator.onLine
   : null;
 const poktMainnetProvider = navigator.onLine
   ? new ethers.providers.StaticJsonRpcProvider(
-      "https://eth-mainnet.gateway.pokt.network/v1/lb/611156b4a585a20035148406",
-    )
+    "https://eth-mainnet.gateway.pokt.network/v1/lb/611156b4a585a20035148406",
+  )
   : null;
 const mainnetInfura = navigator.onLine
   ? new ethers.providers.StaticJsonRpcProvider("https://mainnet.infura.io/v3/" + INFURA_ID)
@@ -178,8 +178,8 @@ function App(props) {
     poktMainnetProvider && poktMainnetProvider._isProvider
       ? poktMainnetProvider
       : scaffoldEthProvider && scaffoldEthProvider._network
-      ? scaffoldEthProvider
-      : mainnetInfura;
+        ? scaffoldEthProvider
+        : mainnetInfura;
 
   const [injectedProvider, setInjectedProvider] = useState();
   const [address, setAddress] = useState();
@@ -263,7 +263,7 @@ function App(props) {
   const vendorApproval = useContractReader(readContracts, "YourToken", "allowance", [
     address, vendorAddress
   ]);
-  console.log("🤏 vendorApproval",vendorApproval)
+  console.log("🤏 vendorApproval", vendorApproval)
 
   const vendorTokenBalance = useContractReader(readContracts, "YourToken", "balanceOf", [vendorAddress]);
   console.log("🏵 vendorTokenBalance:", vendorTokenBalance ? ethers.utils.formatEther(vendorTokenBalance) : "...");
@@ -486,6 +486,10 @@ function App(props) {
   const buyTokensEvents = useEventListener(readContracts, "Vendor", "BuyTokens", localProvider, 1);
   console.log("📟 buyTokensEvents:", buyTokensEvents);
 
+
+  const sellTokensEvents = useEventListener(readContracts, "Vendor", "SellTokens", localProvider, 1);
+  console.log("📟 sellTokensEvents:", sellTokensEvents);
+
   const [tokenBuyAmount, setTokenBuyAmount] = useState({
     valid: false,
     value: ''
@@ -496,13 +500,13 @@ function App(props) {
   });
   const [isSellAmountApproved, setIsSellAmountApproved] = useState();
 
-  useEffect(()=>{
-    console.log("tokenSellAmount",tokenSellAmount.value)
+  useEffect(() => {
+    console.log("tokenSellAmount", tokenSellAmount.value)
     const tokenSellAmountBN = tokenSellAmount.valid ? ethers.utils.parseEther("" + tokenSellAmount.value) : 0;
-    console.log("tokenSellAmountBN",tokenSellAmountBN)
+    console.log("tokenSellAmountBN", tokenSellAmountBN)
     setIsSellAmountApproved(vendorApproval && tokenSellAmount.value && vendorApproval.gte(tokenSellAmountBN))
-  },[tokenSellAmount, readContracts])
-  console.log("isSellAmountApproved",isSellAmountApproved)
+  }, [tokenSellAmount, readContracts])
+  console.log("isSellAmountApproved", isSellAmountApproved)
 
   const ethCostToPurchaseTokens =
     tokenBuyAmount.valid && tokensPerEth && ethers.utils.parseEther("" + tokenBuyAmount.value / parseFloat(tokensPerEth));
@@ -635,10 +639,7 @@ function App(props) {
                 </div>
               </Card>
             </div>
-          
-            
-            
-            {/*Extra UI for buying the tokens back from the user using "approve" and "sellTokens"
+
 
             <Divider />
             <div style={{ padding: 8, marginTop: 32, width: 300, margin: "auto" }}>
@@ -661,7 +662,7 @@ function App(props) {
                   />
                   <Balance balance={ethValueToSellTokens} dollarMultiplier={price} />
                 </div>
-                {isSellAmountApproved?
+                {isSellAmountApproved ?
 
                   <div style={{ padding: 8 }}>
                     <Button
@@ -695,12 +696,12 @@ function App(props) {
                         setBuying(false);
                         let resetAmount = tokenSellAmount
                         setTokenSellAmount("");
-                        setTimeout(()=>{
+                        setTimeout(() => {
                           setTokenSellAmount(resetAmount)
-                        },1500)
+                        }, 1500)
                       }}
                       disabled={!tokenSellAmount.valid}
-                      >
+                    >
                       Approve Tokens
                     </Button>
                     <Button
@@ -710,12 +711,11 @@ function App(props) {
                       Sell Tokens
                     </Button>
                   </div>
-                    }
+                }
 
 
               </Card>
             </div>
-            */}
             <div style={{ padding: 8, marginTop: 32 }}>
               <div>Vendor Token Balance:</div>
               <Balance balance={vendorTokenBalance} fontSize={64} />
@@ -738,6 +738,24 @@ function App(props) {
                       ETH to get
                       <Balance balance={item.args[2]} />
                       Tokens
+                    </List.Item>
+                  );
+                }}
+              />
+            </div>
+
+            <div style={{ width: 500, margin: "auto", marginTop: 64 }}>
+              <div>Sell Token Events:</div>
+              <List
+                dataSource={sellTokensEvents}
+                renderItem={item => {
+                  return (
+                    <List.Item key={item.blockNumber + item.blockHash}>
+                      <Address value={item.args[0]} ensProvider={mainnetProvider} fontSize={16} /> sold
+                      <Balance balance={item.args[2]} />
+                      Tokens for
+                      <Balance balance={item.args[1]} />
+                      ETH
                     </List.Item>
                   );
                 }}
